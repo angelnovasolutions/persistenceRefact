@@ -2,6 +2,8 @@
 2017-04-28 12:36:20.714  INFO 17176 --- [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring FrameworkServlet 'dispatcherServlet'
 2017-04-28 12:36:20.714  INFO 17176 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : FrameworkServlet 'dispatcherServlet': initialization started
 2017-04-28 12:36:20.733  INFO 17176 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : FrameworkServlet 'dispatcherServlet': initialization completed in 18 ms
+
+
 Inicio FLujo Completo: 	12:36:20.857
 Inicio Respuesta BD(getQuerySP): 	12:36:20.879
 Fin Respuesta BD(getQuerySP): 		12:36:22.258
