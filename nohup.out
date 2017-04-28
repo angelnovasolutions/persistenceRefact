@@ -13,3 +13,6 @@ CompilerOracle: exclude javax/swing/text/GlyphView.getBreakSpot
 Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize=192m; support was removed in 8.0
 CompilerOracle: exclude javax/swing/text/GlyphView.getBreakSpot
 ### Excluding compile: javax.swing.text.GlyphView::getBreakSpot
+Java HotSpot(TM) 64-Bit Server VM warning: ignoring option MaxPermSize=192m; support was removed in 8.0
+CompilerOracle: exclude javax/swing/text/GlyphView.getBreakSpot
+### Excluding compile: javax.swing.text.GlyphView::getBreakSpot

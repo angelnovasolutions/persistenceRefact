@@ -80,14 +80,6 @@ public class SPController {
 	}
 	
 	
-	
-	// Prueba de performace con SP (PROVISIONAL POR PRUEBAS)
-	@RequestMapping(value="/catalogs/retrieveWithSplit/states/{id}")
-	public String retrieveStateWithSplit(@PathVariable int id){
-		spService.getState(id);
-		return "Exitoso";
-	}
-	
 	// Prueba de performace con SP (PROVISIONAL POR PRUEBAS)
 	@RequestMapping(value="/catalogs/retrieve/states/{id}")
 	public String retrieveState(@PathVariable int id){

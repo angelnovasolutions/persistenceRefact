@@ -29,18 +29,57 @@ import mx.com.anzen.utilities.DataType;
 @Transactional
 public class SPRepository extends DataType{
 	
-	// An EntityManager will be automatically injected from entityManagerFactory
-	// setup on DatabaseConfig class.
+	// An EntityManager will be automatically injected from entityManagerFactory setup on DatabaseConfig class.
 	@PersistenceContext
 	private EntityManager entityManager;
 	
-	// Inicio para formar JSON
-	SimpleDateFormat time = new SimpleDateFormat("HH:mm:ss.SS");    // yyyy-MM-dd 
 	
+	// Inicio para formar JSON
+	SimpleDateFormat time = new SimpleDateFormat("HH:mm:ss.SS");    																													// yyyy-MM-dd 
+
+	
+	/**
+	   * Invoke a Stored Procedure (Insercion, actualizacion y eliminacion de datos)
+	   * Tipos de Datos de PARAMETROS
+	   * 
+	   * PARAMETRO_Integer = 1
+	   * PARAMETRO_Float = 2		
+	   * PARAMETRO_String = 3
+	   * PARAMETRO_Byte = 4, 
+	   * PARAMETRO_Short = 5, 
+	   * PARAMETRO_Long = 6, 
+	   * PARAMETRO_Double = 7, 
+	   * PARAMETRO_Boolean = 8, 
+	   * PARAMETRO_Character = 9;
+	   * 
+	   * @param nameSP: Nombre del Stored Procedure que sera invocado en la base de datos
+	   * @param parametros: Se envia una lista con los parametros de entrada que seran registrados en el SP en un objeto lista 
+	   *                    con los atributos: Tipo de dato, nombre del parametro y el valor del parametro
+	   *                    
+	   * @return Object: Retorna un objeto generico para ser casteado al tipo de entidad que se requiera
+	   */
+	public StringBuilder getQuerySP(String nameSP, List<ParametrosSP> parametros){
+		  
+		  // Variable
+		  StoredProcedureQuery storedProcedure = null;
+		  
+		  try{
+			  // registra Stored Procedure, declara y configura parametros de entrada
+			  storedProcedure = createStoredProcedure(nameSP, parametros);
+			  																																																												System.out.println(String.valueOf("Inicio Respuesta BD(getQuerySP): \t" + time.format(new Date())));			  
+			  // execute SP
+			  storedProcedure.execute();
+			  																																																												System.out.println(String.valueOf("Fin Respuesta BD(getQuerySP): \t\t" + time.format(new Date())));
+		  } catch(Exception ex){
+			  ex.getMessage();
+		  }
+		  
+		  return convertJSON((ArrayList<?>)storedProcedure.getResultList());
+	  }
+	  
 	  
 	  /**
-	   * Invoke a Stored Procedure (Consultas)
-	   * 
+	   * Invoke a Stored Procedure (Insercion, actualizacion y eliminacion de datos)
 	   * Tipos de Datos de PARAMETROS
 	   * 1.- Enteros
 	   * 2.- Decimales
@@ -52,23 +91,77 @@ public class SPRepository extends DataType{
 	   *                    
 	   * @return Object: Retorna un objeto generico para ser casteado al tipo de entidad que se requiera
 	   */
-    @SuppressWarnings("rawtypes")
-	public StringBuilder getQuerySP(String nameSP, List<ParametrosSP> parametros){
-		  
+	public Object getCRUDSP(String nameSP, List<ParametrosSP> parametros){
+		
+		  // Variable
+		  Integer result = null;
+		  String message = null;
+		  Vector<Object> response = new Vector<Object>();
+		 
 		  // Variable
 		  StoredProcedureQuery storedProcedure = null;
-		  //String JSON = "";
-		  
-		  StringBuilder sb = new StringBuilder();
 		  
 		  try{
-			  // Se invoca el SP
-			   storedProcedure = entityManager.createStoredProcedureQuery(nameSP);
+			  
+			  // registra Stored Procedure, declara y configura parametros de entrada
+			  storedProcedure = createStoredProcedure(nameSP, parametros);
+			  
+			  // registra parametros de salida
+			  storedProcedure.registerStoredProcedureParameter("result", Integer.class, ParameterMode.OUT);
+			  storedProcedure.registerStoredProcedureParameter("message", String.class, ParameterMode.OUT);
+			  
+			  // executa Stored Proceudre
+			  storedProcedure.execute();
+			  
+		      // recupera parametros de salida
+			  result = (Integer)storedProcedure.getOutputParameterValue("result");
+			  message = (String)storedProcedure.getOutputParameterValue("message");
+			  
+			  response.add(result);
+			  response.add(message);
+			  
+		  } catch(Exception ex){
+			  response.add(-1);
+			  response.add(ex.getMessage().toString());
+		  }
+		  
+		  return response;
+	  }
 
-			  // Se declaran y configuran los parametros
+	
+	/**
+	   * Configura los parametros enviados al Stored Procedure
+	   * Tipos de Datos de PARAMETROS
+	   * 
+	   * PARAMETRO_Integer = 1
+	   * PARAMETRO_Float = 2		
+	   * PARAMETRO_String = 3
+	   * PARAMETRO_Byte = 4, 
+	   * PARAMETRO_Short = 5, 
+	   * PARAMETRO_Long = 6, 
+	   * PARAMETRO_Double = 7, 
+	   * PARAMETRO_Boolean = 8, 
+	   * PARAMETRO_Character = 9;
+	   * 
+	   * @param nameSP: Nombre del Stored Procedure que sera invocado en la base de datos
+	   * @param parametros: Se envia una lista con los parametros de entrada que seran registrados en el SP en un objeto lista 
+	   *                    con los atributos: Tipo de dato, nombre del parametro y el valor del parametro
+	   *                    
+	   * @return StoredProcedureQuery: Retorna un objeto StoredProcedureQuery configurado con el Stored Procedure a invocar y sus parametros
+	   */
+	private StoredProcedureQuery createStoredProcedure(String nameSP, List<ParametrosSP> parametros){
+		
+		// Variable
+		StoredProcedureQuery storedProcedure = null;
+		
+		try{
+			
+			  // registra Stored Procedure
+			  storedProcedure = entityManager.createStoredProcedureQuery(nameSP);
+
+			  // declara y configura parametros
 			  int totalParametros = parametros.size();
 			  
-			  // Crear parametros
 			  for(int i=0; i<totalParametros; i++){
 				  
 				  switch(parametros.get(i).getTipoDato()){
@@ -132,192 +225,14 @@ public class SPRepository extends DataType{
 				  }
 				  
 			  }
-  
-		      
-			  
-			// Parametros de salida
-			  //storedProcedure.registerStoredProcedureParameter("json", java.sql.Clob.class, ParameterMode.OUT);
-			  
-			  
-// Inicia Respuesta BD (PROVISIONAL POR PRUEBAS)
-System.out.println(String.valueOf("Inicio Respuesta BD(getQuerySP): \t" + time.format(new Date())));
-			  
-			  // execute SP
-			  storedProcedure.execute();
-			  
-// Fin Respuesta BD (PROVISIONAL POR PRUEBAS)
-System.out.println(String.valueOf("Fin Respuesta BD(getQuerySP): \t\t" + time.format(new Date())));
-			  
-			  
-			//get the result
-			//java.sql.Clob reslt = (java.sql.Clob)storedProcedure.getOutputParameterValue("json");
 			
-			
-			//sb = clobToString(reslt);
-			  
-			  
-		  } catch(Exception ex){
-			  System.out.println(ex.getMessage());
-		  }
-
-	      //return JSON;
-		  
-		// Convertir consulta de base de datos en JSON (PROVISIONAL POR PRUEBAS)
-//		  if(tipoSP == 1){
-//			  return convertJSONWithSplit((ArrayList)storedProcedure.getResultList());
-//				
-//		  } else {
-//			  return convertJSON((ArrayList)storedProcedure.getResultList());
-//			  //return sb;
-//		  }
-		  
-		  
-		  StringBuilder sbTesting = convertJSON((ArrayList)storedProcedure.getResultList());  
-		  
-		  return sbTesting;
-		  
-	  }
-	  
-	  
-	  
-	  
-	  /**
-	   * Invoke a Stored Procedure (Insercion, actualizacion y eliminacion de datos)
-	   * Tipos de Datos de PARAMETROS
-	   * 1.- Enteros
-	   * 2.- Decimales
-	   * 3.- Texto
-	   * 
-	   * @param nameSP: Nombre del Stored Procedure que sera invocado en la base de datos
-	   * @param parametros: Se envia una lista con los parametros de entrada que seran registrados en el SP en un objeto lista 
-	   *                    con los atributos: Tipo de dato, nombre del parametro y el valor del parametro
-	   *                    
-	   * @return Object: Retorna un objeto generico para ser casteado al tipo de entidad que se requiera
-	   */
-	  public Object getCRUDSP(String nameSP, List<ParametrosSP> parametros){
+		} catch(Exception ex){
+			ex.getMessage();
+		}
 		
-		  // Variable
-		  StoredProcedureQuery storedProcedure = null;
-		  Integer parametroEntero = 0;
-		  Float parametroDecimal = 0F;
-		  String parametroTexto = "";
-		  Integer reslt = null;
-		  String message = null;
-		  Vector<Object> response = new Vector<Object>();
-		  
-		  // Constantes
-		  final int ENTEROS = 1, DECIMALES=2, TEXTO=3;
-		  
-		  try{
-			  // Se invoca el SP
-			  storedProcedure = entityManager.createStoredProcedureQuery(nameSP);
-			  
-			  // Se declaran y configuran los parametros
-			  int totalParametros = parametros.size();
-			  
-			  // Crear parametros de Entrada
-			  for(int i=0; i<totalParametros; i++){
-				  
-				  switch(parametros.get(i).getTipoDato()){
-				  
-			  		case ENTEROS:
-			  			parametroEntero = (Integer) parametros.get(i).getParametro();
-			  			storedProcedure.registerStoredProcedureParameter(parametros.get(i).getNombreParametro(), Integer.class, ParameterMode.IN);
-			  			storedProcedure.setParameter(parametros.get(i).getNombreParametro(), parametroEntero);
-			  			break;
-			  		
-			  		case DECIMALES:
-			  			parametroDecimal = (Float) parametros.get(i).getParametro();
-			  			storedProcedure.registerStoredProcedureParameter(parametros.get(i).getNombreParametro(), Float.class, ParameterMode.IN);
-			  			storedProcedure.setParameter(parametros.get(i).getNombreParametro(), parametroDecimal);
-			  			break;
-			  			
-			  		case TEXTO:
-			  			parametroTexto = (String) parametros.get(i).getParametro();
-			  			storedProcedure.registerStoredProcedureParameter(parametros.get(i).getNombreParametro(), String.class, ParameterMode.IN);
-			  			storedProcedure.setParameter(parametros.get(i).getNombreParametro(), parametroTexto);
-			  			break;
-			  			
-			  			default:
-			  				break;
-				  }
-				  
-			  }
-			  
-			  // Parametros de salida
-			  storedProcedure.registerStoredProcedureParameter("reslt", Integer.class, ParameterMode.OUT);
-			  storedProcedure.registerStoredProcedureParameter("message", String.class, ParameterMode.OUT);
-			  
-			  // execute SP
-			  storedProcedure.execute();
-			  
-		      // get the result
-			  reslt = (Integer)storedProcedure.getOutputParameterValue("reslt");
-			  message = (String)storedProcedure.getOutputParameterValue("message");
-			  
-			  response.add(reslt);
-			  response.add(message);
-			  
-			  
-			  
-		  } catch(Exception ex){
-			  response.add(-1);
-			  response.add(ex.getMessage().toString());
-			  
-		  }
-		  
-		  return response;
-	  }
-
-
-	  /**
-	   * Metodo para generar un JSON del metodo getQuerySP a partir del patro Key : Value con el metodo Split
-	   * @param lstConsulta: Lista para ocnvertir en JSON
-	   * @return json: Una cadena de texto con el formato JSON de la lista recibida por parametro
-	   */
-	@SuppressWarnings({ "unused", "rawtypes" })
-	private StringBuilder convertJSONWithSplit(ArrayList<?> lstConsulta){
-
-// Inicia JSON (PROVISIONAL POR PRUEBAS)
-System.out.println(String.valueOf("Inicio JSON(convconvertJSONWithSplitertJSON): \t" + time.format(new Date())));
+		return storedProcedure;
 		
-		
-		StringBuilder json = new StringBuilder();
-		  json.append("{\"convert\": [");
-		  
-		  int totalregistros = lstConsulta.size();
-// Inicia JSON (PROVISIONAL POR PRUEBAS)
-System.out.println(String.valueOf("Total Registros(convconvertJSONWithSplitertJSON): \t" + totalregistros));
-		  for(int i=0; i<totalregistros; i++){
-			  
-			  json.append("{");
-			  int totalCampos = ((Object[])lstConsulta.get(i)).length;
-			  
-			  for(int j=0; j<totalCampos; j++){
-				  String[] aux = ((String)((Object[])lstConsulta.get(i))[j]).split(":");
-				  json.append("\"").append(aux[0]).append("\": ").append("\"").append(aux[1]).append("\"");
-				  
-				  if((j+1) != totalCampos){
-					  json.append(",");
-				  }
-			  }
-			  json.append("}");
-			  
-			  if((i+1) != totalregistros){
-				  json.append(",");
-			  }
-		  }
-		  
-		  json.append("]}");
-		  
-		  
-// Fin JSON (PROVISIONAL POR PRUEBAS)
-System.out.println(String.valueOf("Fin JSON(convertJSONWithSplit): \t\t" + time.format(new Date())));
-		
-		  return json;
-	  }
-	
-	
+	}
 	
 	
 	  /**
@@ -326,23 +241,15 @@ System.out.println(String.valueOf("Fin JSON(convertJSONWithSplit): \t\t" + time.
 	   * @return json: Una cadena de texto con el formato JSON de la lista recibida por parametro
 	   */
 	private StringBuilder convertJSON(ArrayList<?> lstConsulta){
-	
-// Inicia JSON (PROVISIONAL POR PRUEBAS)
-System.out.println(String.valueOf("Inicio JSON(convertJSON): \t" + time.format(new Date())));
 		
-		
-		// Se crea el StringBuilder que contendra el JSON completo
+		// Se crea el StringBuilder que contendra el JSON completo y se apertura
 		StringBuilder json = new StringBuilder();
-		
-		// Se declara la apertura del objeto array(convert) JSON
 		json.append("[");
-//		json.append("{ \"convert\" : { \"fields\" : [");
-		
+
 		// Ciclo para concatenar registro por registro del nuevo JSON
 		int totalregistros = lstConsulta.size(); 
-// Total Registros (PROVISIONAL POR PRUEBAS)
-System.out.println(String.valueOf("Total Registros(convertJSON): \t" + totalregistros));
-		
+																																																															System.out.println(String.valueOf("Total Registros para generar JSON: \t" + totalregistros));
+																																																															System.out.println(String.valueOf("Inicio --> Genera JSON: \t\t" + time.format(new Date())));
 		for(int i=0; i<totalregistros; i++){
 			json.append(lstConsulta.get(i));
 		
@@ -350,105 +257,13 @@ System.out.println(String.valueOf("Total Registros(convertJSON): \t" + totalregi
 			if((i+1) != totalregistros){
 				json.append(",");
 			}
-		}
-		  
+		}		  
+		
 		// Se cierra la estructra JSON
 		json.append("]");
-//		json.append("]}}");
-		
-		
-// Fin JSON (PROVISIONAL POR PRUEBAS)
-System.out.println(String.valueOf("Fin JSON(convertJSON): \t\t" + time.format(new Date())));
-//System.out.print("json");
-//System.out.println(json);
-
+																																																															System.out.println(String.valueOf("Fin --> Genera JSON: \t\t\t" + time.format(new Date())));
 		return json;
-	  }
+	}
 	
-	
-	  
-	  
-	  /**
-	   * Metodo para generar la lista que retornara el metodo getQuerySP
-	   * @param lstConsulta: Lista de consulta nativa del SP
-	   * @return lstResponse: Lista que sera retornada por el metodo getQuerySP con los campos casteados
-	   */
-	  @SuppressWarnings("rawtypes")
-	  public ArrayList<?> responseArrayList(ArrayList lstConsulta){
-		  
-		  // Se obtiene total de registros de la columna
-		  int totalregistros = lstConsulta.size();
-		  
-		  // Se crea lista donde se van a guarda rlos registros
-		  ArrayList<ArrayList<?>> lstCampos = new ArrayList<ArrayList<?>>();
-		  
-		  // Ciclo para recorrer cada registro de la consulta
-		  for(int i=0; i<totalregistros; i++){
-			  
-			  // Lista para guardar los campos casteados por registro
-			  ArrayList<Comparable> lstAux = new ArrayList<>();
-			  int totalCampos = ((Object[])lstConsulta.get(i)).length;
-			  
-			  // Se itera cada registro de la consulta para guardar y castear el tipo de dato a regresar en la nueva lista 
-			  for(int j=0; j<totalCampos; j++){
-				   
-				  if(((Object[])lstConsulta.get(i))[j] == null){
-					  lstAux.add(null);
-					  break;
-				  } 
-				  
-				  if(((Object[])lstConsulta.get(i))[j] instanceof String){
-						lstAux.add((String)((Object[])lstConsulta.get(i))[j]);
-				  }else if (((Object[])lstConsulta.get(i))[j] instanceof Byte) {
-						lstAux.add((Byte)((Object[])lstConsulta.get(i))[j]);
-				  }else if (((Object[])lstConsulta.get(i))[j] instanceof Short) {
-						lstAux.add((Short)((Object[])lstConsulta.get(i))[j]);
-				  }else if (((Object[])lstConsulta.get(i))[j] instanceof Integer) {
-						lstAux.add((Integer)((Object[])lstConsulta.get(i))[j]);
-				  }else if (((Object[])lstConsulta.get(i))[j] instanceof Long) {
-						lstAux.add((Long)((Object[])lstConsulta.get(i))[j]);
-				  }else if (((Object[])lstConsulta.get(i))[j] instanceof Float) {
-						lstAux.add((Float)((Object[])lstConsulta.get(i))[j]);
-				  }else if (((Object[])lstConsulta.get(i))[j] instanceof Double) {
-						lstAux.add((Double)((Object[])lstConsulta.get(i))[j]);
-				  }else if (((Object[])lstConsulta.get(i))[j] instanceof Boolean) {
-						lstAux.add((Boolean)((Object[])lstConsulta.get(i))[j]);
-				  }else if (((Object[])lstConsulta.get(i))[j] instanceof Character) {
-						lstAux.add((Character)((Object[])lstConsulta.get(i))[j]);
-				  }
-
-			  }
-			  
-			  // Se guarda el registro de cada iteracion con los campos casteados
-			  lstCampos.add(lstAux);
-		  }
-		  
-		  
-		  return lstCampos; 
-	  }
-	  
-	  
-	  
-	  @SuppressWarnings("unused")
-	private StringBuilder clobToString(Clob data) {
-		    StringBuilder sb = new StringBuilder();
-		    try {
-		        Reader reader = data.getCharacterStream();
-		        BufferedReader br = new BufferedReader(reader);
-
-		        String line;
-		        while(null != (line = br.readLine())) {
-		            sb.append(line);
-		        }
-		        br.close();
-		    } catch (SQLException e) {
-		        // handle this exception
-		    } catch (IOException e) {
-		        // handle this exception
-		    }
-		    return sb;
-		}
-	  
-	  
 }
 
